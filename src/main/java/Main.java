@@ -4,14 +4,17 @@ import com.opencsv.CSVReader;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-import com.opencsv.exceptions.CsvException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.Collections;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
@@ -44,11 +47,42 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) {
+    public static List<Employee> parseXML(String fileName) throws ParserConfigurationException, IOException, SAXException {
+        List<Employee> list = new ArrayList<>();
+
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document doc = documentBuilder.parse(new File(fileName));
+        Node root = doc.getDocumentElement();
+
+        NodeList nodeList = root.getChildNodes();
+        for (int i = 1; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (Node.ELEMENT_NODE == node.getNodeType()) {
+                Element element = (Element) node;
+                list.add(new Employee(
+                        Long.parseLong(element.getElementsByTagName("id").item(0).getTextContent()),
+                        element.getElementsByTagName("firstName").item(0).getTextContent(),
+                        element.getElementsByTagName("lastName").item(0).getTextContent(),
+                        element.getElementsByTagName("country").item(0).getTextContent(),
+                        Integer.parseInt(element.getElementsByTagName("age").item(0).getTextContent())
+                ));
+            }
+        }
+        return list;
+    }
+
+    public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException {
+        // first part
         String[] columnMapping = {"id", "firstName", "lastName", "country", "age"};
-        String fileName = "data.csv";
-        List<Employee> list = parseCSV(columnMapping, fileName);
-        String json = listToJSON(list);
-        writeString(json, "data.json");
+        String csvFileName = "data.csv";
+        List<Employee> listFromCSV = parseCSV(columnMapping, csvFileName);
+        String jsonFromCSV = listToJSON(listFromCSV);
+        writeString(jsonFromCSV, "data.json");
+        // second part
+        String xmlFileName = "data.xml";
+        List<Employee> listFromXML = parseXML("data.xml");
+        String jsonFromXML = listToJSON(listFromXML);
+        writeString(jsonFromXML, "data2.json");
     }
 }
